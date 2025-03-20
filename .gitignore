@@ -1,0 +1,31 @@
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Model files and cache
+models/
+*.safetensors
+__pycache__/
+*.pyc
+
+# Other common Python ignores
+*.pyo
+*.pyd
+.Python
+.env
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg

@@ -1,0 +1,1 @@
+Your graphics card should have at least 6GB of VRAM, and you should have roughly more than 12GB of RAM. Spark TTS is around 10GB in size, so you'll need 10GB of free space. If you decide to use a CPU instead, you'll need a powerful one along with at least 16GB of RAM.
