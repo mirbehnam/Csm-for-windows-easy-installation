@@ -12,6 +12,13 @@ $config = @{
     CloneDir        = Join-Path $PWD 'csm'
 }
 
+# Check if project already exists
+if (Test-Path $config.CloneDir) {
+    Write-Host "Project already exists at $($config.CloneDir)" -ForegroundColor Green
+    Write-Host "No action needed. Exiting..." -ForegroundColor Green
+    exit 0
+}
+
 function Test-GitInstallation {
     try {
         $null = Get-Command git -ErrorAction Stop
