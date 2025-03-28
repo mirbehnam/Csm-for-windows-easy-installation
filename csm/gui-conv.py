@@ -124,6 +124,22 @@ def create_silence(duration_ms: int, sample_rate: int, device: str) -> torch.Ten
     """Create a silence tensor of specified duration"""
     num_samples = int(duration_ms * sample_rate / 1000)
     return torch.zeros(num_samples, device=device)
+    
+def preprocess_text(text):
+    lines = text.split('\n')
+    cleaned_lines = []
+    for line in lines:
+        line = line.strip()
+        while line and line[0] in ',-._/@#*%$().':
+            line = line[1:]
+        line = line.strip()
+        if line:
+            cleaned_lines.append(line)
+    text = ', '.join(cleaned_lines)
+    text = text.replace(';', ', ').replace(':', ', ')
+    text = text.replace("'", "").replace("’", "")
+    return text
+    
 
 def generate_conversation(speaker1_audio, speaker1_text, speaker2_audio, speaker2_text, conversation_text):
     try:
@@ -135,15 +151,16 @@ def generate_conversation(speaker1_audio, speaker1_text, speaker2_audio, speaker
         prompt1 = prepare_prompt(speaker1_text, 0, speaker1_audio)
         prompt2 = prepare_prompt(speaker2_text, 1, speaker2_audio)
         
-        # Parse conversation text into turns
+        # Parse conversation text into turns with preprocessing
         conversation_lines = conversation_text.strip().split('\n')
         conversation = []
         
         for i, line in enumerate(conversation_lines):
-            if line.strip():
+            preprocessed_line = preprocess_text(line)
+            if preprocessed_line:
                 conversation.append({
-                    "text": line.strip(),
-                    "speaker_id": i % 2  # Alternate between speakers
+                    "text": preprocessed_line,
+                    "speaker_id": i % 2
                 })
         
         if not conversation:
@@ -153,22 +170,19 @@ def generate_conversation(speaker1_audio, speaker1_text, speaker2_audio, speaker
         generated_segments = []
         prompt_segments = [prompt1, prompt2]
         
-        # Create silence tensor on the same device as the model
+        # Create silence tensor
         silence = create_silence(500, generator.sample_rate, device)
         
         for i, utterance in enumerate(conversation, 1):
-            # Display current sentence being processed
-            current_speaker = "Speaker 1" if utterance['speaker_id'] == 0 else "Speaker 2"
-            print(f"\nProcessing [{i}/{len(conversation)}] {current_speaker}: {utterance['text']}")
+            print(f"\nProcessing [{i}/{len(conversation)}] Speaker {utterance['speaker_id'] + 1}: {utterance['text']}")
             
             audio_tensor = generator.generate(
                 text=utterance['text'],
                 speaker=utterance['speaker_id'],
                 context=prompt_segments + generated_segments,
                 max_audio_length_ms=15_000,
-                temperature=0.95
+                temperature=0.85
             )
-            # Ensure audio tensor is on the correct device
             audio_tensor = audio_tensor.to(device)
             generated_segments.append(
                 Segment(text=utterance['text'], 
@@ -176,17 +190,15 @@ def generate_conversation(speaker1_audio, speaker1_text, speaker2_audio, speaker
                        audio=audio_tensor)
             )
             
-            # Update status in the UI
             gr.Info(f"Generated {i}/{len(conversation)}: {utterance['text'][:50]}...")
         
-        # Concatenate all generations with silence between them
+        # Concatenate all generations with silence
         all_audio_segments = []
         for i, seg in enumerate(generated_segments):
             all_audio_segments.append(seg.audio)
-            if i < len(generated_segments) - 1:  # Don't add silence after the last segment
+            if i < len(generated_segments) - 1:
                 all_audio_segments.append(silence)
                 
-        # Concatenate and move to CPU for final output
         all_audio = torch.cat(all_audio_segments, dim=0)
         
         return (generator.sample_rate, all_audio.cpu().numpy()), "Generation completed successfully!"

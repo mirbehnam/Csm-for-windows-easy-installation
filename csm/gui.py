@@ -74,8 +74,11 @@ def preprocess_text(text):
     text = ', '.join(cleaned_lines)
     # Replace semicolons and colons with comma space
     text = text.replace(';', ', ').replace(':', ', ')
-    
+    text = text.replace("'", "").replace("’", "")
+
     return text
+
+
 
 def process_voice_cloning(ref_audio, ref_transcript, text_to_generate, process_text_enabled):
     try:
